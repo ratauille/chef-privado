@@ -1,14 +1,17 @@
 {
   "name": "chefos-backend",
   "version": "1.0.0",
-  "description": "Backend para ChefOS con integración a Vertex AI, reCAPTCHA Enterprise y Secret Manager",
-  "main": "server.js",
+  "description": "ChefOS Backend API con Vertex AI y reCAPTCHA Enterprise",
+  "main": "index.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node index.js"
   },
   "dependencies": {
+    "@google-cloud/recaptcha-enterprise": "^5.4.0",
+    "@google-cloud/vertexai": "^1.1.0",
+    "cors": "^2.8.5",
     "express": "^4.19.2",
-    "node-fetch": "^2.7.0"
+    "helmet": "^7.1.0"
   },
   "engines": {
     "node": ">=18.0.0"

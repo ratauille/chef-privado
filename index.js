@@ -1,0 +1,132 @@
+const express = require("express");
+const helmet = require("helmet");
+const cors = require("cors");
+const { VertexAI } = require("@google-cloud/vertexai");
+const { RecaptchaEnterpriseServiceClient } = require("@google-cloud/recaptcha-enterprise");
+
+const app = express();
+const PORT = process.env.PORT || 8080;
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || "chefos-502422";
+const LOCATION = process.env.GCP_REGION || "us-central1";
+
+// Middlewares de seguridad y parsing
+app.use(helmet());
+app.use(cors());
+app.use(express.json());
+
+// Inicialización de Clientes Google Cloud (usando ADC vía chefos-backend-sa)
+const vertexAI = new VertexAI({ project: PROJECT_ID, location: LOCATION });
+const generativeModel = vertexAI.getGenerativeModel({
+  model: "gemini-1.5-flash",
+});
+
+const recaptchaClient = new RecaptchaEnterpriseServiceClient();
+
+// 1. Health Checks
+app.get("/", (req, res) => {
+  res.status(200).json({
+    status: "online",
+    service: "ChefOS Backend API",
+    project: PROJECT_ID,
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get("/healthz", (req, res) => res.status(200).send("OK"));
+app.get("/readyz", (req, res) => res.status(200).send("READY"));
+
+// 2. Endpoint de Generación con Vertex AI
+app.post("/api/ai/generate", async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ error: "El campo \"prompt\" es requerido." });
+    }
+
+    const resp = await generativeModel.generateContent(prompt);
+    const contentResponse = await resp.response;
+    const responseText = contentResponse.candidates[0].content.parts[0].text;
+
+    return res.status(200).json({
+      success: true,
+      data: responseText
+    });
+  } catch (error) {
+    console.error("Error invocando Vertex AI:", error);
+    return res.status(500).json({
+      error: "Error interno procesando la solicitud con Vertex AI",
+      details: process.env.NODE_ENV === "development" ? error.message : undefined
+    });
+  }
+});
+
+// 3. Endpoint de Verificación de reCAPTCHA Enterprise
+app.post("/api/auth/verify-recaptcha", async (req, res) => {
+  try {
+    const { token, recaptchaAction } = req.body;
+    const siteKey = process.env.RECAPTCHA_SITE_KEY || "6LeNx7gtAAAAAPCFE5ZnK_cU7WWgba-_4UIDe7YK";
+
+    if (!token || !siteKey) {
+      return res.status(400).json({ error: "Faltan parámetros de validación o clave de sitio." });
+    }
+
+    const projectPath = recaptchaClient.projectPath(PROJECT_ID);
+    const request = {
+      parent: projectPath,
+      assessment: {
+        event: {
+          token: token,
+          siteKey: siteKey,
+        },
+      },
+    };
+
+    const [response] = await recaptchaClient.createAssessment(request);
+
+    if (!response.tokenProperties || !response.tokenProperties.valid) {
+      return res.status(403).json({
+        valid: false,
+        reason: response.tokenProperties ? response.tokenProperties.invalidReason : "INVALID_TOKEN"
+      });
+    }
+
+    // Verificar que la acción coincida con la esperada
+    if (recaptchaAction && response.tokenProperties.action !== recaptchaAction) {
+      return res.status(403).json({
+        valid: false,
+        reason: "Action mismatch"
+      });
+    }
+
+    return res.status(200).json({
+      valid: true,
+      score: response.riskAnalysis.score,
+      reasons: response.riskAnalysis.reasons
+    });
+  } catch (error) {
+    console.error("Error evaluando reCAPTCHA:", error);
+    return res.status(500).json({ error: "Fallo en la evaluación de seguridad." });
+  }
+});
+
+// Inicio del servidor
+const server = app.listen(PORT, () => {
+  console.log(`ChefOS Backend operativo en puerto ${PORT}`);
+});
+
+// 4. Graceful Shutdown (SIGTERM / SIGINT)
+const gracefulShutdown = (signal) => {
+  console.log(`Señal ${signal} recibida. Cerrando conexiones HTTP limpiamente...`);
+  server.close(() => {
+    console.log("Servidor HTTP cerrado. Proceso finalizado.");
+    process.exit(0);
+  });
+
+  setTimeout(() => {
+    console.error("Forzando apagado por timeout...");
+    process.exit(1);
+  }, 10000);
+};
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
