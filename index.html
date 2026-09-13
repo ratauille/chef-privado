@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chef Privado - Login</title>
+
+  <!-- Google reCAPTCHA Enterprise Script -->
   <script src="https://www.google.com/recaptcha/enterprise.js?render=6Lc6v7gtAAAAAPYVODf4-6g1NTwkOqguBVUIVqdy"></script>
 </head>
 <body>
@@ -26,6 +28,29 @@
       grecaptcha.enterprise.ready(async () => {
         const token = await grecaptcha.enterprise.execute("6Lc6v7gtAAAAAPYVODf4-6g1NTwkOqguBVUIVqdy", {action: "LOGIN"});
         console.log("reCAPTCHA Token generado:", token);
+
+        // Enviar al servidor para crear la evaluación (Assessment)
+        try {
+          const response = await fetch("/api/verify-recaptcha", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              token: token,
+              action: "LOGIN"
+            })
+          });
+
+          const result = await response.json();
+          console.log("Resultado de evaluación:", result);
+
+          if (result.success) {
+            alert(`Acceso concedido. Score: ${result.score}`);
+          } else {
+            alert(`Acceso denegado o actividad sospechosa (Score: ${result.score || 0})`);
+          }
+        } catch (err) {
+          console.error("Error al conectar con la API de evaluación:", err);
+        }
       });
     }
   </script>
