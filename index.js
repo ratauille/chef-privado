@@ -14,8 +14,12 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
-// Inicialización de Google Gen AI cliente (Vertex AI con ADC)
-const ai = new GoogleGenAI({ vertexai: true, project: PROJECT_ID, location: LOCATION });
+// Inicialización de Google Gen AI cliente (soporta Vertex AI con ADC o GEMINI_API_KEY)
+const apiKey = process.env.GEMINI_API_KEY;
+const ai = apiKey
+  ? new GoogleGenAI({ apiKey: apiKey })
+  : new GoogleGenAI({ vertexai: true, project: PROJECT_ID, location: LOCATION });
+
 const recaptchaClient = new RecaptchaEnterpriseServiceClient();
 
 // 1. Health Checks
@@ -29,9 +33,10 @@ app.get("/", (req, res) => {
 });
 
 app.get("/health", (req, res) => res.status(200).send("OK"));
+app.get("/healthz", (req, res) => res.status(200).send("OK"));
 app.get("/readyz", (req, res) => res.status(200).send("READY"));
 
-// 2. Endpoint de Generación con Vertex AI / Gemini
+// 2. Endpoint de Generación con Gemini / Vertex AI
 app.post("/api/ai/generate", async (req, res) => {
   try {
     const { prompt } = req.body;
@@ -39,7 +44,7 @@ app.post("/api/ai/generate", async (req, res) => {
       return res.status(400).json({ error: "El campo \"prompt\" es requerido." });
     }
 
-    const modelName = process.env.GEMINI_MODEL || "gemini-2.0-flash-exp";
+    const modelName = process.env.GEMINI_MODEL || (apiKey ? "gemini-2.5-flash" : "gemini-1.5-flash");
 
     const response = await ai.models.generateContent({
       model: modelName,
