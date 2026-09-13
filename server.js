@@ -4,7 +4,7 @@ const fetch = require("node-fetch");
 const app = express();
 app.use(express.json());
 
-const SITE_KEY = "6Lc6v7gtAAAAAPYVODf4-6g1NTwkOqguBVUIVqdy";
+const SITE_KEY = "6LeNx7gtAAAAAPqpo5Hcnn7-JCpOp_GML8W6T01N";
 const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID || "chef4youbyfranko";
 const API_KEY = process.env.GCP_API_KEY || "TU_API_KEY_AQUI";
 
