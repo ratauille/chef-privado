@@ -1,7 +1,7 @@
 const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
-const { VertexAI } = require("@google-cloud/vertexai");
+const { GoogleGenAI } = require("@google/genai");
 const { RecaptchaEnterpriseServiceClient } = require("@google-cloud/recaptcha-enterprise");
 
 const app = express();
@@ -14,12 +14,8 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
-// Inicialización de Clientes Google Cloud (usando ADC vía chefos-backend-sa)
-const vertexAI = new VertexAI({ project: PROJECT_ID, location: LOCATION });
-const generativeModel = vertexAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
-});
-
+// Inicialización de Google Gen AI cliente (Vertex AI con ADC)
+const ai = new GoogleGenAI({ vertexai: true, project: PROJECT_ID, location: LOCATION });
 const recaptchaClient = new RecaptchaEnterpriseServiceClient();
 
 // 1. Health Checks
@@ -32,10 +28,10 @@ app.get("/", (req, res) => {
   });
 });
 
-app.get("/healthz", (req, res) => res.status(200).send("OK"));
+app.get("/health", (req, res) => res.status(200).send("OK"));
 app.get("/readyz", (req, res) => res.status(200).send("READY"));
 
-// 2. Endpoint de Generación con Vertex AI
+// 2. Endpoint de Generación con Vertex AI / Gemini
 app.post("/api/ai/generate", async (req, res) => {
   try {
     const { prompt } = req.body;
@@ -43,16 +39,17 @@ app.post("/api/ai/generate", async (req, res) => {
       return res.status(400).json({ error: "El campo \"prompt\" es requerido." });
     }
 
-    const resp = await generativeModel.generateContent(prompt);
-    const contentResponse = await resp.response;
-    const responseText = contentResponse.candidates[0].content.parts[0].text;
+    const response = await ai.models.generateContent({
+      model: "gemini-1.5-flash-001",
+      contents: prompt,
+    });
 
     return res.status(200).json({
       success: true,
-      data: responseText
+      data: response.text
     });
   } catch (error) {
-    console.error("Error invocando Vertex AI:", error);
+    console.error("Error invocando Vertex AI (Gemini):", error);
     return res.status(500).json({
       error: "Error interno procesando la solicitud con Vertex AI",
       details: process.env.NODE_ENV === "development" ? error.message : undefined
@@ -90,7 +87,6 @@ app.post("/api/auth/verify-recaptcha", async (req, res) => {
       });
     }
 
-    // Verificar que la acción coincida con la esperada
     if (recaptchaAction && response.tokenProperties.action !== recaptchaAction) {
       return res.status(403).json({
         valid: false,

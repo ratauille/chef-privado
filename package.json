@@ -7,8 +7,8 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "@google/genai": "^1.52.0",
     "@google-cloud/recaptcha-enterprise": "^5.4.0",
-    "@google-cloud/vertexai": "^1.1.0",
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "helmet": "^7.1.0"
