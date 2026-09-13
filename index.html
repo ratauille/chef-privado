@@ -3,56 +3,77 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chef Privado - Login</title>
+  <title>ChefOS / Chef Privado - Formulario Seguro con reCAPTCHA Enterprise</title>
 
-  <!-- Google reCAPTCHA Enterprise Script -->
-  <script src="https://www.google.com/recaptcha/enterprise.js?render=6LeNx7gtAAAAAPCFE5ZnK_cU7WWgba-_4UIDe7YK"></script>
+  <!-- Google reCAPTCHA Enterprise Script (Proyecto: chef4youbyfranko) -->
+  <script src="https://www.google.com/recaptcha/enterprise.js?render=6Lc6v7gtAAAAAPYVODf4-6g1NTwkOqguBVUIVqdy"></script>
 </head>
 <body>
-  <div class="container">
-    <h1>Chef Privado</h1>
+  <div class="container" style="max-width: 400px; margin: 50px auto; font-family: sans-serif;">
+    <h2>ChefOS - Iniciar Sesión</h2>
+    
     <form id="login-form">
-      <label for="email">Correo electrónico:</label>
-      <input type="email" id="email" name="email" required>
+      <div style="margin-bottom: 15px;">
+        <label for="email">Correo Electrónico:</label><br>
+        <input type="email" id="email" name="email" style="width: 100%; padding: 8px;" required>
+      </div>
 
-      <label for="password">Contraseña:</label>
-      <input type="password" id="password" name="password" required>
+      <div style="margin-bottom: 15px;">
+        <label for="password">Contraseña:</label><br>
+        <input type="password" id="password" name="password" style="width: 100%; padding: 8px;" required>
+      </div>
 
-      <button id="submit-btn" onclick="onClick(event)">Iniciar Sesión</button>
+      <!-- Campo oculto recomendado para el token de respuesta (g-recaptcha-response) -->
+      <input type="hidden" id="g-recaptcha-response" name="g-recaptcha-response">
+
+      <button type="submit" id="submit-btn" style="width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; cursor: pointer;">
+        Iniciar Sesión
+      </button>
     </form>
+
+    <div id="status-message" style="margin-top: 15px; font-weight: bold;"></div>
   </div>
 
   <script>
-    function onClick(e) {
-      e.preventDefault();
-      grecaptcha.enterprise.ready(async () => {
-        const token = await grecaptcha.enterprise.execute("6LeNx7gtAAAAAPCFE5ZnK_cU7WWgba-_4UIDe7YK", {action: "LOGIN"});
-        console.log("reCAPTCHA Token generado:", token);
+    const SITE_KEY = "6Lc6v7gtAAAAAPYVODf4-6g1NTwkOqguBVUIVqdy";
 
-        // Enviar al servidor para crear la evaluación (Assessment)
+    document.getElementById("login-form").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const statusDiv = document.getElementById("status-message");
+      statusDiv.innerText = "Verificando seguridad con reCAPTCHA Enterprise...";
+
+      grecaptcha.enterprise.ready(async () => {
         try {
-          const response = await fetch("/api/verify-recaptcha", {
+          // Generar el token de respuesta reCAPTCHA v3 / Enterprise
+          const token = await grecaptcha.enterprise.execute(SITE_KEY, { action: "LOGIN" });
+          document.getElementById("g-recaptcha-response").value = token;
+
+          // Enviar el token y datos al backend de producción en Cloud Run
+          const response = await fetch("/api/auth/verify-recaptcha", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               token: token,
-              action: "LOGIN"
+              recaptchaAction: "LOGIN"
             })
           });
 
           const result = await response.json();
-          console.log("Resultado de evaluación:", result);
 
-          if (result.success) {
-            alert(`Acceso concedido. Score: ${result.score}`);
+          if (result.valid) {
+            statusDiv.style.color = "green";
+            statusDiv.innerText = `✅ Verificación exitosa. Puntuación de riesgo: ${result.score}`;
           } else {
-            alert(`Acceso denegado o actividad sospechosa (Score: ${result.score || 0})`);
+            statusDiv.style.color = "red";
+            statusDiv.innerText = `❌ Error de seguridad (${result.reason || "Acceso denegado"})`;
           }
         } catch (err) {
-          console.error("Error al conectar con la API de evaluación:", err);
+          console.error("Error al procesar reCAPTCHA:", err);
+          statusDiv.style.color = "red";
+          statusDiv.innerText = "⚠️ Error de conexión con el servidor.";
         }
       });
-    }
+    });
   </script>
 </body>
 </html>

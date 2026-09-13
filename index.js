@@ -14,6 +14,9 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
+// Servir archivos estáticos (index.html, etc.)
+app.use(express.static("."));
+
 // Inicialización de Google Gen AI cliente (soporta Vertex AI con ADC o GEMINI_API_KEY)
 const apiKey = process.env.GEMINI_API_KEY;
 const ai = apiKey
@@ -23,15 +26,6 @@ const ai = apiKey
 const recaptchaClient = new RecaptchaEnterpriseServiceClient();
 
 // 1. Health Checks
-app.get("/", (req, res) => {
-  res.status(200).json({
-    status: "online",
-    service: "ChefOS Backend API",
-    project: PROJECT_ID,
-    timestamp: new Date().toISOString()
-  });
-});
-
 app.get("/health", (req, res) => res.status(200).send("OK"));
 app.get("/healthz", (req, res) => res.status(200).send("OK"));
 app.get("/readyz", (req, res) => res.status(200).send("READY"));
@@ -68,7 +62,7 @@ app.post("/api/ai/generate", async (req, res) => {
 app.post("/api/auth/verify-recaptcha", async (req, res) => {
   try {
     const { token, recaptchaAction } = req.body;
-    const siteKey = process.env.RECAPTCHA_SITE_KEY || "6LeNx7gtAAAAAPCFE5ZnK_cU7WWgba-_4UIDe7YK";
+    const siteKey = process.env.RECAPTCHA_SITE_KEY || "6Lc6v7gtAAAAAPYVODf4-6g1NTwkOqguBVUIVqdy";
 
     if (!token || !siteKey) {
       return res.status(400).json({ error: "Faltan parámetros de validación o clave de sitio." });
