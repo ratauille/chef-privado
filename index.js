@@ -39,8 +39,10 @@ app.post("/api/ai/generate", async (req, res) => {
       return res.status(400).json({ error: "El campo \"prompt\" es requerido." });
     }
 
+    const modelName = process.env.GEMINI_MODEL || "gemini-2.0-flash-exp";
+
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash-001",
+      model: modelName,
       contents: prompt,
     });
 
@@ -52,7 +54,7 @@ app.post("/api/ai/generate", async (req, res) => {
     console.error("Error invocando Vertex AI (Gemini):", error);
     return res.status(500).json({
       error: "Error interno procesando la solicitud con Vertex AI",
-      details: process.env.NODE_ENV === "development" ? error.message : undefined
+      details: error.message
     });
   }
 });
