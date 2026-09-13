@@ -1,4 +1,4 @@
-name: Deploy ChefOS Backend to Cloud Run
+name: Build and Deploy ChefOS
 
 on:
   push:
@@ -6,12 +6,39 @@ on:
       - main
 
 jobs:
-  deploy:
-    name: Build and Deploy to Cloud Run
+  build:
+    name: Build & Package Artifact
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Dependencies
+        run: npm install --only=production
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chefos-build-artifact
+          path: |
+            .
+            !.git
+
+  deploy:
+    name: Deploy to Cloud Run
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: chefos-build-artifact
+          path: ./app
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -23,10 +50,12 @@ jobs:
 
       - name: Build & Push Container Image
         run: |
+          cd ./app
           gcloud builds submit --tag us-central1-docker.pkg.dev/chefos-502422/chefos-repo/chefos-backend:latest --project=chefos-502422
 
       - name: Deploy to Cloud Run
         run: |
+          cd ./app
           gcloud run deploy chefos-backend \
             --image=us-central1-docker.pkg.dev/chefos-502422/chefos-repo/chefos-backend:latest \
             --region=us-central1 \
