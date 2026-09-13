@@ -6,7 +6,7 @@
   <title>Chef Privado - Login</title>
 
   <!-- Google reCAPTCHA Enterprise Script -->
-  <script src="https://www.google.com/recaptcha/enterprise.js?render=6LeNx7gtAAAAAPqpo5Hcnn7-JCpOp_GML8W6T01N"></script>
+  <script src="https://www.google.com/recaptcha/enterprise.js?render=6LeNx7gtAAAAAPCFE5ZnK_cU7WWgba-_4UIDe7YK"></script>
 </head>
 <body>
   <div class="container">
@@ -26,7 +26,7 @@
     function onClick(e) {
       e.preventDefault();
       grecaptcha.enterprise.ready(async () => {
-        const token = await grecaptcha.enterprise.execute("6LeNx7gtAAAAAPqpo5Hcnn7-JCpOp_GML8W6T01N", {action: "LOGIN"});
+        const token = await grecaptcha.enterprise.execute("6LeNx7gtAAAAAPCFE5ZnK_cU7WWgba-_4UIDe7YK", {action: "LOGIN"});
         console.log("reCAPTCHA Token generado:", token);
 
         // Enviar al servidor para crear la evaluación (Assessment)
