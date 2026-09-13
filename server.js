@@ -5,8 +5,8 @@ const app = express();
 app.use(express.json());
 
 const SITE_KEY = "6Lc6v7gtAAAAAPYVODf4-6g1NTwkOqguBVUIVqdy";
-const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID || "tu-gcp-project-id";
-const API_KEY = process.env.GCP_API_KEY || "tu-gcp-api-key";
+const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID || "chef4youbyfranko";
+const API_KEY = process.env.GCP_API_KEY || "TU_API_KEY_AQUI";
 
 app.post("/api/verify-recaptcha", async (req, res) => {
   const { token, action } = req.body;
@@ -15,6 +15,7 @@ app.post("/api/verify-recaptcha", async (req, res) => {
     return res.status(400).json({ error: "Token de reCAPTCHA requerido" });
   }
 
+  // Endpoint oficial de evaluación para el proyecto chef4youbyfranko
   const endpoint = `https://recaptchaenterprise.googleapis.com/v1/projects/${GCP_PROJECT_ID}/assessments?key=${API_KEY}`;
 
   const payload = {
