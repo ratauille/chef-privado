@@ -1,0 +1,7 @@
+name: "ChefOS Custom Action"
+description: "GitHub Action personalizada para ChefOS con ciclo de vida completo (setup, main, cleanup)"
+runs:
+  using: "node24"
+  pre: "setup.js"
+  main: "index.js"
+  post: "cleanup.js"
